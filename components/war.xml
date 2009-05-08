@@ -1,0 +1,91 @@
+<?xml version="1.0"?>
+<project name="war" xmlns:ac="local:net.sf.antcontrib">
+
+  <import file="base.xml"/>
+  <import file="java.xml"/>
+	<import file="jar.xml"/>
+  <import file="unit.xml"/>
+  <import file="dependencies.xml"/>
+
+  <property name="war.build.dir" value="${build.dir}/war"/>
+  <property name="war.artifact.dir" value="${artifact.dir}"/>
+
+  <!-- macros -->
+
+  <macrodef name="for-each-module-with-web-module">
+    <element name="tasks" implicit="true"/>
+    <sequential>
+      <for-each-module>
+        <ac:if>
+          <available file="@{module}${module.component.seperator}web"/>
+          <ac:then>
+            <war-prepare-context-name module="@{module}"/>
+            <tasks/>
+          </ac:then>
+        </ac:if>
+      </for-each-module>
+    </sequential>
+  </macrodef>
+
+  <macrodef name="war-prepare-context-name">
+    <attribute name="module"/>
+    <sequential>
+      <prepare-module-name module="@{module}"/>
+      <property name="@{module}.war.context" value="${@{module}.name}" />
+    </sequential>  
+  </macrodef> 
+
+  <macrodef name="war-assemble">
+    <attribute name="module"/>
+    <attribute name="destination" default="${war.build.dir}/@{module}"/>
+    <sequential>
+
+      <mkdir dir="@{destination}"/>
+      <mkdir dir="@{destination}/WEB-INF"/>
+      <mkdir dir="@{destination}/WEB-INF/lib"/>
+
+      <dependencies-copy destination="@{destination}/WEB-INF/lib" conf="@{module}-package" types="jar,ejb"/>
+
+      <copy todir="@{destination}">
+        <fileset dir="@{module}${module.component.seperator}web">
+          <exclude name="WEB-INF/lib/**/*"/>
+        </fileset>
+      </copy>
+
+      <mkdir dir="@{destination}/WEB-INF/classes"/>
+      <mkdir dir="@{destination}/WEB-INF/classes/META-INF"/>
+      <ac:if>
+        <available file="@{module}${module.component.seperator}java"/>
+        <ac:then>
+          <copy todir="@{destination}/WEB-INF/classes">
+            <fileset dir="${binary.dir}/@{module}"/>
+          </copy>
+        </ac:then>
+      </ac:if>
+      <jar-create-version-properties module="@{module}" destination="@{destination}/WEB-INF/classes/META-INF/version.properties"/>
+    </sequential>
+  </macrodef>
+
+  <macrodef name="war-package">
+    <attribute name="module"/>
+    <sequential>
+      <prepare-module-name module="@{module}"/>
+      <war-assemble module="@{module}"/>
+
+      <mkdir dir="${war.artifact.dir}"/>
+      <jar jarfile="${war.artifact.dir}/${@{module}.name}.war"
+          manifest="${war.build.dir}/@{module}/META-INF/MANIFEST.MF">
+        <fileset dir="${war.build.dir}/@{module}" includes="**" excludes="META-INF/MANIFEST.MF"/>
+      </jar>
+    </sequential>
+  </macrodef>
+
+  <!-- exported targets -->
+
+  <target name="war:package" depends="java:compile,unit:test,java:package">
+    <for-each-module-with-web-module>
+      <war-package module="@{module}"/>
+    </for-each-module-with-web-module>
+  </target>
+
+</project>

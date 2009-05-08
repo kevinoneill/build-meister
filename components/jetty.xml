@@ -1,0 +1,29 @@
+<project name="jetty" xmlns:ac="local:net.sf.antcontrib" xmlns:jetty="antlib:org.mortbay.jetty">
+
+   <import file="base.xml"/>
+
+   <property name="jetty.component.dir" value="${build.components.dir}/jetty"/>
+
+<!-- 
+  <path id="jetty.classpath">
+    <fileset dir="${jetty.component.dir}" includes="*.jar"/>
+  </path>
+  
+  <taskdef classpathref="jetty.plugin.classpath" resource="tasks.properties" loaderref="jetty.loader" />
+ -->   
+ 
+  <taskdef
+      resource="tasks.properties"
+      uri="antlib:org.mortbay.jetty">
+    <classpath>
+      <fileset dir="${jetty.component.dir}">
+        <include name="**/*.jar"/>
+      </fileset>
+    </classpath>
+  </taskdef>
+  
+  <target name="jetty:launch">
+    <jetty:jetty/>
+  </target>   
+
+</project>

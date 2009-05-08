@@ -1,0 +1,70 @@
+<?xml version="1.0"?>
+<project name="schemas" xmlns:ac="local:net.sf.antcontrib">
+
+  <import file="base.xml"/>
+
+  <property name="schemas.dir" value="${build.components.dir}/schemas"/>
+
+  <property name="schemas.src.dir" value="${basedir}/schemas"/>
+
+  <taskdef name="xml-validate-task" classname="org.iso_relax.ant.JARVTask">
+	<classpath >
+	  <fileset dir="${schemas.dir}">
+		<include name="*.jar"/>
+	  </fileset>
+	</classpath>
+  </taskdef>
+
+  <macrodef name="for-each-schema">
+	<attribute name="parameter" default="schema.file"/>
+	<element name="tasks" implicit="true"/>
+	<sequential>
+	  <fileset id="schema.set" dir="${schemas.src.dir}">
+		<include name="**/*.xsd"/>
+	  </fileset>
+	  <pathconvert pathsep="," property="schema.list" refid="schema.set">
+		<!--
+		  <regexpmapper from="^${schemas.src.dir}/(.*)\.xsd$" to="\1" handledirsep="yes"/>
+		-->
+		<filtermapper>
+		  <replacestring from="${schemas.src.dir}/" to=""/>
+		  <replacestring from=".xsd" to=""/>
+		</filtermapper>
+	  </pathconvert>
+
+	  <ac:for list="${schema.list}" param="@{parameter}">
+		<sequential>
+		  <tasks/>
+		</sequential>
+	  </ac:for>
+
+	</sequential>
+  </macrodef>
+
+  <macrodef name="xml-validate">
+	<attribute name="schema"/>
+	<sequential>
+	  <xml-validate-task
+		  schemaLanguage="http://www.w3.org/2001/XMLSchema"
+		  schema="${schemas.src.dir}/@{schema}.xsd">
+		
+		<fileset dir="${basedir}/schemas-test">
+		  <include name="@{schema}-*.xml"/>
+		</fileset>
+
+	  </xml-validate-task>
+	</sequential>
+  </macrodef>
+  
+  <!-- private targets -->
+  <available property="schemas.available" file="${schemas.src.dir}"/>
+  <target name="-schemas:validate" if="schemas.available">
+	<for-each-schema>
+	  <xml-validate schema="@{schema.file}"/>
+	</for-each-schema>
+  </target>
+
+  <!-- public targets -->
+  <target name="schemas:validate" depends="-schemas:validate"/>
+
+</project>

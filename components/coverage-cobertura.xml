@@ -1,0 +1,144 @@
+<?xml version="1.0"?>
+<project name="cobertura"
+    xmlns:cob="local:net.sourceforge.cobertura"
+    xmlns:ac="local:net.sf.antcontrib">
+
+  <import file="base.xml"/>
+  <import file="java.xml"/>
+	<import file="groovy.xml"/>
+	<import file="scala.xml"/>
+  <import file="unit.xml"/>
+
+  <!-- Public Targets -->
+
+  <target name="coverage:instrument" depends="-coverage:instrument"/>
+  <target name="coverage:report" depends="-coverage:report"/>
+  <target name="coverage:check" depends="-coverage:check, unit:test"/>
+
+  <!-- Internal Targets -->
+
+  <property name="cobertura.dir" value="${build.components.dir}/cobertura"/>
+
+  <property name="coverage.classes.dir" value="${build.dir}/classes/instrumented"/>
+  <property name="coverage.report.dir" value="${report.dir}/coverage"/>  
+  <property name="coverage.report.raw" value="${coverage.report.dir}/cobertura.ser"/>
+  <property name="coverage.excludes" value=""/>
+
+  <path id="coverage.lib.path">
+    <fileset dir="${cobertura.dir}">
+      <include name="*.jar"/>
+    </fileset>
+  </path>
+
+  <taskdef
+      classpathref="coverage.lib.path"
+      resource="tasks.properties"
+      uri="local:net.sourceforge.cobertura"/>
+
+  <macrodef name="coverage-instrument">
+    <attribute name="module"/>
+    <sequential>
+
+      <dependencies-internal target="@{module}"/>
+      <dependencies-fileset-shallow target="@{module}"/>
+      <dependencies-fileset-shallow target="@{module}-compile"/>
+
+			<delete dir="${coverage.classes.dir}/@{module}" failonerror="true"/>
+  	  <module-prepare-build-dir module="@{module}" component="core"/>
+			<copy todir="${coverage.classes.dir}/@{module}">
+        <fileset dir="${@{module}-core.build.dir}"
+            excludes="${coverage.excludes}">
+          <include name="**/*"/>
+        </fileset>
+      </copy>
+
+      <cob:cobertura-instrument datafile="${coverage.report.raw}">
+
+        <classpath>
+          <path refid="dependencies.@{module}-compile.fileset.shallow"/>
+          <path refid="dependencies.@{module}.fileset.shallow"/>
+        </classpath>
+
+        <fileset dir="${coverage.classes.dir}/@{module}">
+          <include name="**/*.class"/>
+        </fileset>
+
+      </cob:cobertura-instrument>
+
+    </sequential>
+  </macrodef>
+
+  <macrodef name="coverage-check">
+    <attribute name="target"/>
+    <attribute name="class-threshold" default="80"/>
+    <attribute name="total-threshold" default="80"/>
+    <sequential>
+
+      <cob:cobertura-check datafile="${coverage.report.raw}"
+          failureproperty="coverage.failed"
+          haltonfailure="no"
+
+          linerate="@{class-threshold}"
+          packagelinerate="@{total-threshold}"
+          totallinerate="@{total-threshold}"
+
+          branchrate="@{class-threshold}"
+          packagebranchrate="@{total-threshold}"
+          totalbranchrate="@{total-threshold}"
+
+          />
+
+    </sequential>
+  </macrodef>
+
+  <macrodef name="coverage-report">
+    <attribute name="format" default="html"/>    
+    <attribute name="dir" default="${coverage.report.dir}/@{format}"/>
+    <sequential>
+      <ac:if>
+        <available file="${coverage.report.raw}"/>
+        <ac:then>
+          <java-merge-source/>
+    			<groovy-merge-source/>
+					<scala-merge-source/>
+					
+          <mkdir dir="@{dir}"/>
+          <cob:cobertura-report format="@{format}"
+              datafile="${coverage.report.raw}"
+              destdir="@{dir}">
+            <fileset dir="${scratch.dir}/all-source">
+              <include name="**/*"/>
+            </fileset>
+          </cob:cobertura-report>
+        </ac:then>
+				<ac:else>
+					<echo message="No coverage fiel found"/>
+				</ac:else>
+      </ac:if>
+    </sequential>
+  </macrodef>
+
+  <target name="-coverage:instrument" depends="java:compile">
+    <delete file="${coverage.report.raw}"/>
+    <mkdir dir="${coverage.report.dir}"/>
+    <for-each-module-with-unit-tests>
+      <coverage-instrument module="@{module}"/>
+
+      <path id="coverage.path.@{module}.instrumented">
+        <pathelement location="${coverage.classes.dir}/@{module}"/>
+        <path refid="coverage.lib.path"/>
+      </path>
+    </for-each-module-with-unit-tests>
+  </target>
+
+  <target name="-coverage:check">
+    <for-each-module-with-unit-tests>
+      <coverage-check target="@{module}"/>
+    </for-each-module-with-unit-tests>
+  </target>
+
+  <target name="-coverage:report" depends="unit:test-no-fail">
+      <coverage-report format="xml"/>
+      <coverage-report format="html"/>
+  </target>
+</project>

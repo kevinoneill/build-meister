@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="tomcat" xmlns:tomcat="antlib:org.apache.catalina">
+
+   <import file="base.xml"/>
+   <import file="java.xml"/>
+   <import file="war.xml"/>
+
+   <property name="tomcat.component.dir" value="${build.components.dir}/tomcat"/>
+
+   <property name="tomcat.host" value="localhost"/>
+   <property name="tomcat.port" value="8080"/>
+   <property name="tomcat.manager.url" value="http://${tomcat.host}:${tomcat.port}/manager"/>
+   <property name="tomcat.username" value="admin"/>
+   <property name="tomcat.password" value="admin"/>
+
+   <taskdef uri="antlib:org.apache.catalina" resource="org/apache/catalina/ant/catalina.tasks">
+    <classpath>
+      <fileset dir="${tomcat.component.dir}">
+        <include name="**/*.jar"/>
+      </fileset>
+    </classpath>
+   </taskdef>
+   
+   
+  <macrodef name="tomcat-deploy">
+    <attribute name="module"/>
+    <sequential>
+      <tomcat:deploy url="${tomcat.manager.url}"
+              username="${tomcat.username}"
+              password="${tomcat.password}"
+              war="file:${war.artifact.dir}/${@{module}.name}.war"
+              path="/${@{module}.war.context}"/>
+    </sequential>
+  </macrodef>
+   
+  <macrodef name="tomcat-undeploy">
+    <attribute name="module"/>
+    <sequential>
+      <tomcat:undeploy url="${tomcat.manager.url}"
+              username="${tomcat.username}"
+              password="${tomcat.password}"
+              path="/${@{module}.war.context}"/>
+    </sequential>
+  </macrodef>
+
+  <macrodef name="tomcat-reload">
+    <attribute name="module"/>
+    <sequential>
+      <tomcat:reload url="${tomcat.manager.url}"
+              username="${tomcat.username}"
+              password="${tomcat.password}"
+              path="/${@{module}.war.context}"/>
+    </sequential>
+  </macrodef>
+
+  <macrodef name="tomcat-start">
+    <attribute name="module"/>
+    <sequential>
+      <tomcat:start url="${tomcat.manager.url}"
+              username="${tomcat.username}"
+              password="${tomcat.password}"
+              path="/${@{module}.war.context}"/>
+    </sequential>
+  </macrodef>
+
+  <macrodef name="tomcat-stop">
+    <attribute name="module"/>
+    <sequential>
+      <tomcat:stop url="${tomcat.manager.url}"
+              username="${tomcat.username}"
+              password="${tomcat.password}"
+              path="/${@{module}.war.context}"/>
+    </sequential>
+  </macrodef>
+
+  <target name="tomcat:deploy" description="Install application in Tomcat" depends="war:package">
+    <for-each-module-with-web-module>
+      <tomcat-deploy module="@{module}"/>
+    </for-each-module-with-web-module>
+  </target>
+
+  <target name="tomcat:undeploy" description="Remove application in Tomcat">
+    <for-each-module-with-web-module>
+      <tomcat-undeploy module="@{module}"/>
+    </for-each-module-with-web-module>
+  </target>
+
+  <target name="tomcat:reload" description="Reload application in Tomcat">
+    <for-each-module-with-web-module>
+      <tomcat-reload module="@{module}"/>
+    </for-each-module-with-web-module>
+  </target>
+
+  <target name="tomcat:start" description="Start Tomcat application">
+    <for-each-module-with-web-module>
+      <tomcat-start module="@{module}"/>
+    </for-each-module-with-web-module>
+  </target>
+
+  <target name="tomcat:stop" description="Stop Tomcat application">
+    <for-each-module-with-web-module>
+      <tomcat-stop module="@{module}"/>
+    </for-each-module-with-web-module>
+  </target>
+
+  <target name="tomcat:list" description="List Tomcat applications">
+    <tomcat:list url="${tomcat.manager.url}"
+          username="${tomcat.username}"
+          password="${tomcat.password}"/>
+  </target>
+  
+  <target name="tomcat:launch">
+  
+  </target>
+  
+  <target name="tomcat:halt">
+  
+  </target>
+</project>

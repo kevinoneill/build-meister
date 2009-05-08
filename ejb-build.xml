@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<project name="ejb-build" basedir="." default="build">
+
+  <property name="build.version" value="dev"/>
+  <dirname property="build.base.dir" file="${ant.file.ejb-build}"/>
+
+  <import file="${build.base.dir}/common.xml"/>
+
+  <import file="${build.components.dir}/base.xml"/>
+  <import file="${build.components.dir}/java.xml"/>
+  <import file="${build.components.dir}/j2ee-1.4.xml"/>
+  <import file="${build.components.dir}/ejb.xml"/>
+  <import file="${build.components.dir}/unit.xml"/>
+  <import file="${build.components.dir}/dependencies.xml"/>
+  <import file="${build.components.dir}/checkstyle.xml"/>
+
+
+  <target name="package" depends="base:init, ejb:package"/>
+  <target name="report" depends="base:init, coverage:report, unit:report, checkstyle:report, dependencies:report"/>
+ 
+  <target name="test" depends="base:init, unit:test" description="Run unit tests"/>
+  <target name="document" depends="base:init, java:document"/>
+  <target name="analyze" depends="base:init, checkstyle:analyze"/>
+
+  <target name="all" depends="package, test, analyze, report, document"/>
+  <target name="build" depends="test, package"/>
+
+</project>

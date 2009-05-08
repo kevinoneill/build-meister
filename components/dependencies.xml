@@ -1,0 +1,318 @@
+<?xml version="1.0"?>
+<project name="dependencies" xmlns:ivy="antlib:org.apache.ivy.ant" xmlns:ac="local:net.sf.antcontrib">
+
+  <!-- public targets -->
+
+  <!--<target name="dependencies:publish-all" depends="-dependencies:interdependencies">-->
+    <!--<dependencies-for-each-project target="clean-publish"/>-->
+  <!--</target>-->
+
+  <target name="dependencies:clear-cache" depends="-dependencies:clear-cache"/>
+  <target name="dependencies:purge" depends="dependencies:clear-cache,-dependencies:clear-project-local"/>
+
+  <target name="dependencies:refresh" depends="dependencies:clean, dependencies:update"/>
+  <target name="dependencies:report" depends="-dependencies:report"/>
+  <target name="dependencies:publish" depends="-dependencies:check-repository, -dependencies:publish"/>
+  <target name="dependencies:release-minor" depends="-dependencies:check-repository, -dependencies:release-minor"/>
+  <target name="dependencies:release-major" depends="-dependencies:check-repository, -dependencies:release-major"/>
+
+  <!-- implementation -->
+
+  <import file="base.xml"/>
+  <import file="java.xml"/>
+
+  <property name="project.dir" value="${basedir}"/>
+  <property name="dependencies.component.dir" value="${build.components.dir}/dependencies"/>
+  <property name="dependencies.third-party.cache" value="${java.io.tmpdir}/ivy/third-party-cache"/>
+  <property name="dependencies.third-party-local.repository" value="${java.io.tmpdir}/ivy/third-party-repository"/>
+  <property name="dependencies.project-local.repository" value="${java.io.tmpdir}/ivy/project-repository"/>
+  <property name="dependencies.development.conf" value="*"/>
+  <property name="dependencies.report.dir" value="${report.dir}/dependencies"/>
+  <property name="dependencies.configuration.url" value="file:${dependencies.component.dir}/ivy-config.xml"/>
+
+  <!-- this should really be dependencies.lib.dir -->
+  <property name="lib.dir" value="${basedir}/lib" />
+
+  <taskdef
+      resource="org/apache/ivy/ant/antlib.xml"
+      uri="antlib:org.apache.ivy.ant">
+    <classpath>
+      <fileset dir="${dependencies.component.dir}">
+        <include name="**/*.jar"/>
+      </fileset>
+    </classpath>
+  </taskdef>
+
+  <macrodef name="dependencies-path-to-property">
+    <attribute name="path"/>
+    <attribute name="property"/>
+    <sequential>
+      <pathconvert property="@{property}" refid="@{path}"/>
+    </sequential>
+  </macrodef>
+
+  <macrodef name="dependencies-clone">
+    <attribute name="organisation"/>
+    <attribute name="module"/>
+    <attribute name="revision"/>
+    <attribute name="transitive" default="true"/>
+    <sequential>
+      <dependencies-configure/>
+      <ivy:install
+        organisation="@{organisation}" module="@{module}" revision="@{revision}"
+        from="third-party-remote" to="third-party-local" transitive="@{transitive}" />
+    </sequential>
+  </macrodef>
+
+  <macrodef name="dependencies-configure">
+    <sequential>
+      <ac:if>
+        <not>
+          <isset property="dependencies.configured"/>
+        </not>
+        <ac:then>
+          <ivy:settings url="${dependencies.configuration.url}"/>
+          
+          <ac:if>
+            <available file="ivy.xml"/>
+            <ac:then>
+              <ivy:info file="${basedir}/ivy.xml" />
+              <property name="dependencies.configurations" value="${ivy.configurations}"/>
+            </ac:then>
+          </ac:if>
+          
+          <property name="dependencies.configured" value="true"/>
+        </ac:then>
+      </ac:if>
+    </sequential>
+  </macrodef>
+  
+  <macrodef name="dependencies-has-target">
+    <attribute name="target"/>
+    <element name="then"/>
+    <element name="else" optional="true"/>
+    <sequential>
+      <dependencies-configure/>
+      <ac:if>
+        <contains string=", ${dependencies.configurations}," substring=", @{target},"/>
+        <ac:then>
+          <echo level="debug" message="${dependencies.configurations} has target @{target}"/>
+          <then/>
+        </ac:then>
+        <ac:else>
+          <echo level="debug" message="${dependencies.configurations} does not have target @{target}"/>
+          <else/>
+        </ac:else>
+      </ac:if>
+    </sequential>
+  </macrodef>
+
+  <macrodef name="dependencies-resolve-shallow">
+    <attribute name="conf"/>
+    <sequential>
+			<dependencies-configure/>
+			<ivy:resolve transitive="false" conf="@{conf}" log="quiet"/>
+    </sequential>
+  </macrodef>
+
+  <macrodef name="dependencies-resolve-transitive">
+    <attribute name="conf"/>
+    <sequential>
+			<dependencies-configure/>
+			<ivy:resolve transitive="true" conf="@{conf}" log="quiet"/>
+    </sequential>
+  </macrodef>
+
+  <macrodef name="dependencies-fileset-shallow">
+    <attribute name="target"/>
+    <attribute name="types" default="jar,ejb"/>
+    <sequential>
+      <dependencies-has-target target="@{target}">
+        <then>
+          <dependencies-resolve-shallow conf="@{target}"/>
+          <!--<dependencies-resolve-transitive conf="@{target}"/>-->
+          <ivy:cachepath pathid="dependencies.@{target}.fileset.shallow"
+              conf="@{target}" type="@{types}"
+              useOrigin="true" transitive="false"/>
+        </then>
+        <else>
+          <mkdir dir="${scratch.dir}/empty"/>
+          <path id="dependencies.@{target}.fileset.shallow">
+            <fileset dir="${scratch.dir}/empty" casesensitive="yes">
+              <exclude name="**/*"/>
+            </fileset>
+          </path>
+        </else>
+      </dependencies-has-target>
+    </sequential>
+  </macrodef>
+
+  <macrodef name="dependencies-path-transitive">
+    <attribute name="target"/>
+    <attribute name="types" default="jar,ejb"/>
+    <sequential>
+      <dependencies-has-target target="@{target}">
+        <then>
+          <dependencies-resolve-transitive conf="@{target}"/>
+          <ivy:cachepath useOrigin="true" pathid="dependencies.@{target}.fileset.transitive" conf="@{target}"
+              type="@{types}" transitive="true"/>
+        </then>
+        <else>
+          <mkdir dir="${scratch.dir}/empty"/>
+          <path id="dependencies.@{target}.fileset.transitive">
+            <fileset dir="${scratch.dir}/empty" casesensitive="yes">
+              <exclude name="**/*"/>
+            </fileset>
+          </path>
+        </else>
+      </dependencies-has-target>
+    </sequential>
+  </macrodef>
+
+  <macrodef name="dependencies-internal">
+    <attribute name="target"/>
+    <sequential>
+      <ac:if>
+        <isset property="dependencies.internal.@{target}"/>
+        <ac:then>
+          <echo message="Internal dependencies for @{target} = ${dependencies.internal.@{target}}"/>
+          <ac:propertyregex property="dependencies.@{target}.internal"
+              input="${dependencies.internal.@{target}}"
+              regexp="([^;]+)"
+              replace="${binary.dir}/\1"/>
+        </ac:then>
+        <ac:else>
+          <mkdir dir="${scratch.dir}/empty"/>
+          <property name="dependencies.@{target}.internal" value="${scratch.dir}/empty"/>
+        </ac:else>
+      </ac:if>
+    </sequential>
+  </macrodef>
+
+  <macrodef name="dependencies-copy">
+    <attribute name="destination"/>
+    <attribute name="conf"/>
+    <attribute name="types" default="*"/>
+    <sequential>
+      <ac:if>
+        <equals arg1="@{conf}" arg2="*" />
+        <ac:then>
+          <dependencies-resolve-transitive conf="*"/>
+          <ivy:retrieve pattern="@{destination}/[artifact].[ext]" conf="@{conf}" sync="true" type="@{types}" log="quiet"/>
+        </ac:then>
+        <ac:else>
+          <dependencies-has-target target="@{conf}">
+            <then>
+              <dependencies-resolve-transitive conf="@{conf}"/>
+              <ivy:retrieve pattern="@{destination}/[artifact].[ext]" conf="@{conf}" sync="true" type="@{types}" log="quiet"/>
+            </then>
+          </dependencies-has-target>
+        </ac:else>
+      </ac:if>
+    </sequential>
+  </macrodef>
+
+  <macrodef name="dependencies-for-each-project">
+    <attribute name="target"/>
+	<element name="body" implicit="yes" optional="yes"/>
+    <sequential>
+      <dependencies-configure/>
+      <ivy:buildlist reference="dependencies.interdependencies" onMissingDescriptor="skip">
+        <fileset dir="${basedir}" includes="**/build.xml"/>
+      </ivy:buildlist>
+      <subant target="@{target}" buildpathref="dependencies.interdependencies">
+		<body/>
+	  </subant>
+    </sequential>
+  </macrodef>
+
+  <macrodef name="dependencies-manifest-classpath">
+    <attribute name="module"/>
+    <attribute name="types" default="jar,ejb"/>
+    <sequential>
+      <dependencies-path-transitive target="@{module}" types="@{types}"/>
+      <pathconvert property="@{module}.manifest.classpath" refid="dependencies.@{module}.fileset.transitive" pathsep=" ">
+        <mapper type="flatten"/>
+      </pathconvert>
+
+    </sequential>
+  </macrodef>
+
+   <target name="-dependencies:publish" if="dependencies.project-local.repository" depends="-dependencies:configure">
+    <mkdir dir="${dependencies.project-local.repository}"/>
+    <delete file="${artifact.dir}/ivy.xml"/>
+    <ivy:publish artifactspattern="${artifact.dir}/[artifact].[ext]"
+        resolver="project-local"
+        pubrevision="${build.revision}"
+        overwrite="true"
+        status="integration"/>
+  </target>
+
+  <target name="-dependencies:release-minor" if="dependencies.project-local.repository" depends="-dependencies:configure">
+    <mkdir dir="${dependencies.project-local.repository}"/>
+    <delete file="${artifact.dir}/ivy.xml"/>
+    <ivy:publish artifactspattern="${artifact.dir}/[artifact].[ext]"
+        resolver="project-local"
+        pubrevision="${release.major}.${release.minor}"
+        status="release"/>
+    <propertyfile file="${basedir}/revision">
+      <entry key="release.minor" type="int" default="1" operation="+"/>
+    </propertyfile>
+  </target>
+
+  <target name="-dependencies:release-major" if="dependencies.project-local.repository" depends="-dependencies:configure">
+    <mkdir dir="${dependencies.project-local.repository}"/>
+    <delete file="${artifact.dir}/ivy.xml"/>
+    <ivy:publish artifactspattern="${artifact.dir}/[artifact].[ext]"
+        resolver="project-local"
+        pubrevision="${release.major}.${release.minor}"
+        status="release"/>
+    <propertyfile file="${basedir}/revision">
+      <entry key="release.major" type="int" default="0" operation="+"/>
+      <entry key="release.minor" type="int" value="0"/>
+    </propertyfile>
+  </target>
+
+  <target name="-dependencies:check-repository" unless="dependencies.project-local.repository">
+    <fail message="dependencies.project-local.repository is not set."/>
+  </target>
+
+  <target name="dependencies:clean">
+    <delete dir="${lib.dir}" failonerror="yes"/>
+  </target>
+
+  <target name="-dependencies:clear-cache" depends="-dependencies:configure">
+    <ivy:cleancache/>
+  </target>
+
+  <target name="-dependencies:clear-project-local" if="dependencies.project-local.repository">
+    <delete dir="${dependencies.project-local.repository}" failonerror="yes"/>
+  </target>
+
+  <target name="-dependencies:configure">
+    <dependencies-configure/>
+  </target>
+
+  <target name="-dependencies:resolve-transitive" depends="-dependencies:configure">
+    <ivy:resolve transitive="true"/>
+  </target>
+
+  <target name="-dependencies:report" depends="-dependencies:resolve-transitive">
+    <mkdir dir="${dependencies.report.dir}"/>
+    <ivy:report todir="${dependencies.report.dir}" xsl="true" dot="true" graph="true"/>
+  </target>
+
+  <target name="dependencies:update"
+      description="Update IVY dependencies" depends="-dependencies:resolve-transitive">
+    <mkdir dir="${lib.dir}" />
+    <dependencies-copy destination="${lib.dir}" conf="${dependencies.development.conf}"/>
+  </target>
+
+  <target name="-dependencies:interdependencies" depends="-dependencies:configure">
+    <ivy:buildlist reference="dependencies.interdependencies" onMissingDescriptor="skip">
+      <fileset dir="${project.dir}" includes="**/build.xml"/>
+    </ivy:buildlist>
+  </target>
+
+
+</project>

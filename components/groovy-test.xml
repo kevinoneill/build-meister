@@ -1,0 +1,166 @@
+<?xml version="1.0"?>
+<project xmlns:ac="local:net.sf.antcontrib" name="test">
+  <import file="base.xml"/>
+  <import file="java.xml"/>
+  <import file="coverage-cobertura.xml"/>
+  <import file="dependencies.xml"/>
+  <import file="groovy.xml"/>
+
+  <!-- public targets -->
+
+  <target name="unit:test" depends="-groovy-test:test">
+    <ac:if>
+      <isset property="unit.failed"/>
+      <ac:then>
+        <unit-generate-report/>
+        <fail message="Unit tests failed. Report generated."/>
+      </ac:then>
+    </ac:if>
+  </target>
+
+  <target name="unit:test-no-fail" depends="-groovy-test:test"/>
+  <target name="unit:report" depends="-groovy-test:report"/>
+
+  <target name="unit:package" depends="-groovy-test:package-support-jar, -groovy-test:package-support-jar-src"/>
+
+  <!-- Internal Targets -->
+
+  <property name="unit.report.raw.dir" value="${report.dir}/unit-tests/raw"/>
+  <property name="unit.report.html.dir" value="${report.dir}/unit-tests/html"/>
+
+  <property name="unit.includes.pattern" value="**/*Test.class"/>
+
+  <macrodef name="for-each-module-with-unit-tests">
+    <element name="tasks" implicit="true"/>
+    <sequential>
+      <for-each-module>
+        <ac:if>
+          <available file="@{module}${module.component.seperator}unit-tests"/>
+          <ac:then>
+            <tasks/>
+          </ac:then>
+          <ac:else>
+            <echo message="No unit test directory found for module @{module}"/>
+          </ac:else>
+        </ac:if>
+      </for-each-module>
+    </sequential>
+  </macrodef>
+
+  <macrodef name="for-each-module-with-test-support">
+    <element name="tasks" implicit="true"/>
+    <sequential>
+      <for-each-module>
+        <ac:if>
+          <available file="@{module}${module.component.seperator}test-support"/>
+          <ac:then>
+            <tasks/>
+          </ac:then>
+        </ac:if>
+      </for-each-module>
+    </sequential>
+  </macrodef>
+
+  <macrodef name="unit-generate-report">
+    <sequential>
+      <ac:if>
+        <available file="${unit.report.raw.dir}"/>
+        <ac:then>
+          <mkdir dir="${unit.report.html.dir}"/>
+    
+          <junitreport todir="${unit.report.raw.dir}">
+            <fileset dir="${unit.report.raw.dir}">
+              <include name="**/TEST-*.xml"/>
+            </fileset>
+            <report format="noframes" todir="${unit.report.html.dir}"/>
+          </junitreport>
+        </ac:then>
+      </ac:if>
+    </sequential>
+  </macrodef>
+
+  <target name="-groovy-test:compile" depends="-groovy-test:support-compile">
+    <for-each-module-with-unit-tests>
+      <groovy-compile module="@{module}" component="unit-tests">
+        <classpath path="${@{module}-core.build.dir}"/>
+        <classpath path="${@{module}-test-support.build.dir}"/>
+      </groovy-compile>
+    </for-each-module-with-unit-tests>
+  </target>
+
+  <target name="-groovy-test:support-compile" depends="java:compile">
+      <for-each-module-with-test-support>
+        <java-compile module="@{module}" component="test-support">
+					<classpath path="${@{module}-core.build.dir}"/>
+        </java-compile>
+      </for-each-module-with-test-support>
+  </target>
+
+  <target name="-groovy-test:package-support-jar" depends="-groovy-test:support-compile">
+    <mkdir dir="${artifact.dir}"/>
+    <for-each-module-with-test-support>
+      <java-jar module="@{module}" component="test-support"/>
+    </for-each-module-with-test-support>
+  </target>
+
+  <target name="-groovy-test:package-support-jar-src">
+    <mkdir dir="${artifact.dir}"/>
+    <for-each-module-with-test-support>
+      <java-zip-src module="@{module}" component="test-support"/>
+    </for-each-module-with-test-support>
+  </target>
+
+  <target name="-groovy-test:test" depends="-groovy-test:compile, coverage:instrument">
+    <for-each-module-with-unit-tests>
+      <mkdir dir="${unit.report.raw.dir}/@{module}"/>
+
+      <dependencies-internal target="@{module}"/>
+      <dependencies-internal target="@{module}-test-support"/>
+      <dependencies-internal target="@{module}-unit-tests"/>
+      <dependencies-path-transitive target="@{module}"/>
+      <dependencies-path-transitive target="@{module}-test-support"/>
+      <dependencies-path-transitive target="@{module}-unit-tests"/>
+
+      <junit failureproperty="unit.failed" fork="yes" forkmode="once">
+        <jvmarg value="-ea"/>
+
+        <sysproperty key="net.sourceforge.cobertura.datafile"
+            file="${coverage.report.raw}"/>
+
+        <sysproperty key="java.awt.headless"
+            value="true"/>
+
+        <batchtest todir="${unit.report.raw.dir}/@{module}">
+          <fileset dir="${binary.dir}/@{module}-unit-tests">
+            <include name="${unit.includes.pattern}"/>
+          </fileset>
+        </batchtest>
+        <formatter type="xml"/>
+
+        <classpath>
+          <pathelement path="${binary.dir}/@{module}-unit-tests"/>
+ 
+          <path refid="coverage.path.@{module}.instrumented"/>
+          <pathelement path="${binary.dir}/@{module}-test-support"/>
+ 
+          <!-- dependencies -->
+          <pathelement path="${dependencies.@{module}.internal}"/>
+          <pathelement path="${dependencies.@{module}-test-support.internal}"/>
+          <pathelement path="${dependencies.@{module}-unit-tests.internal}"/>
+          <path refid="dependencies.@{module}.fileset.transitive"/>
+          <path refid="dependencies.@{module}-test-support.fileset.transitive"/>
+          <path refid="dependencies.@{module}-unit-tests.fileset.transitive"/>
+        </classpath>
+      </junit>
+
+      <!--
+      <coverage-check class-threshold="90" total-threshold="95"/>
+      -->
+    </for-each-module-with-unit-tests>
+  </target>
+
+  <target name="-groovy-test:report" depends="-groovy-test:test">
+    <unit-generate-report/>
+  </target>
+
+</project>

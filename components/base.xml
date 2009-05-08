@@ -1,0 +1,116 @@
+<?xml version="1.0"?>
+<project name="base" xmlns:ac="local:net.sf.antcontrib">
+
+  <dirname property="build.components.dir" file="${ant.file.base}" />
+  <taskdef resource="net/sf/antcontrib/antlib.xml" uri="local:net.sf.antcontrib">
+    <classpath>
+      <fileset dir="${build.components.dir}/base">
+        <include name="**/*.jar" />
+      </fileset>
+    </classpath>
+  </taskdef>
+
+  <ac:propertyregex property="basedir" input="${basedir}" regexp="(\\)" replace="/" override="true" />
+
+  <ac:propertyregex property="build.components.dir" input="${build.components.dir}" regexp="(\\)" replace="/" override="true" />
+
+  <property environment="env"/>
+
+  <!-- version properties -->
+  <import file="${build.components.dir}/version.xml"/>  
+
+  <property name="project.modules" value="main" />
+  <property name="module.component.seperator" value="/" />
+
+  <echo>===============================================================================
+
+    Building ${ant.project.name} revision ${build.revision}
+
+===============================================================================
+  </echo>
+
+  <property name="build.dir" value="${basedir}/build" />
+  <property name="scratch.dir" value="${build.dir}/scratch" />
+  <property name="artifact.dir" value="${build.dir}/artifacts" />
+  <property name="report.dir" value="${build.dir}/reports" />
+  <property name="site.dir" value="${build.dir}/site" />
+	<property name="binary.dir" value="${build.dir}/binary"/>
+
+  <!-- base targets -->
+  <target name="base:init">
+    <mkdir dir="${build.dir}" />
+    <mkdir dir="${scratch.dir}" />
+    <mkdir dir="${artifact.dir}" />
+    <mkdir dir="${report.dir}" />
+    <mkdir dir="${site.dir}" />
+		<mkdir dir="${binary.dir}" />
+  </target>
+
+  <target name="base:clean">
+    <delete dir="${build.dir}" failonerror="yes" />
+  </target>
+
+  <target name="base:build" />
+
+  <macrodef name="for-each-module">
+    <attribute name="parameter" default="module" />
+    <element name="tasks" implicit="true" />
+    <sequential>
+      <ac:for list="${project.modules}" param="@{parameter}" delimiter=";">
+        <sequential>
+          <tasks />
+        </sequential>
+      </ac:for>
+    </sequential>
+  </macrodef>
+
+  <macrodef name="prepare-module-name">
+    <attribute name="module" />
+    <sequential>
+      <ac:if>
+        <equals arg1="@{module}" arg2="main" />
+        <ac:then>
+          <property name="@{module}.name" value="${ant.project.name}" />
+        </ac:then>
+        <ac:else>
+          <property name="@{module}.name" value="${ant.project.name}-@{module}" />
+        </ac:else>
+      </ac:if>
+    </sequential>
+  </macrodef>
+
+	<macrodef name="module-prepare-build-dir">
+		<attribute name="module"/>
+		<attribute name="component" default="core"/>
+		<sequential>
+			<ac:if>
+				<equals arg1="core" arg2="@{component}"/>
+				<ac:then>
+					<property name="@{module}-@{component}.build.dir" value="${binary.dir}/@{module}"/>
+				</ac:then>
+				<ac:else>
+					<property name="@{module}-@{component}.build.dir" value="${binary.dir}/@{module}-@{component}"/>
+				</ac:else>
+			</ac:if>
+			<mkdir dir="${@{module}-@{component}.build.dir}"/>
+		</sequential>
+	</macrodef>
+
+	<macrodef name="module-prepare-artifact-name">
+    <attribute name="module"/>
+	  <attribute name="component" default="core"/>
+    <sequential>
+      <prepare-module-name module="@{module}"/>
+	    <ac:if>
+	      <equals arg1="@{component}" arg2="core" />
+	      <ac:then>
+		      <property name="@{module}.@{component}.artifact.name" value="${@{module}.name}"/>
+	      </ac:then>
+	      <ac:else>
+		      <property name="@{module}.@{component}.artifact.name" value="${@{module}.name}-@{component}"/>
+	      </ac:else>
+	    </ac:if>
+    </sequential>
+  </macrodef>
+
+</project>

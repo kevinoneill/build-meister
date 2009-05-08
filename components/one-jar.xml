@@ -1,0 +1,71 @@
+<project name="one-jar" xmlns:ac="local:net.sf.antcontrib">
+
+   <import file="base.xml"/>
+   <import file="dependencies.xml"/>
+
+   <property name="one-jar.component.dir" value="${build.components.dir}/one-jar"/>
+
+   <macrodef name="one-jar-for-each-module-with-main-class">
+      <element name="tasks" implicit="true"/>
+      <sequential>
+         <java-for-each-module-with-java>
+            <ac:if>
+               <isset property="one-jar.@{module}.main-class"/>
+               <ac:then>
+                  <tasks/>
+               </ac:then>
+            </ac:if>
+         </java-for-each-module-with-java>
+      </sequential>
+   </macrodef>
+
+   <macrodef name="one-jar-package">
+      <attribute name="module"/>
+	   <attribute name="component" default="java"/>
+      <attribute name="main-class" default="${one-jar.@{module}.main-class}"/>
+      <sequential>
+         <module-prepare-artifact-name module="@{module}" component="@{component}"/>
+         <mkdir dir="${scratch.dir}/one-jar/$@{module}.@{component}.artifact.name}"/>
+         
+			<mkdir dir="${scratch.dir}/one-jar/${@{module}.@{component}.artifact.name}/main"/>
+         <jar basedir="${binary.dir}/@{module}" destfile="${scratch.dir}/one-jar/${@{module}.@{component}.artifact.name}/main/main.jar">
+            <manifest>
+               <attribute name="Main-Class" value="@{main-class}"/>
+            </manifest>
+         </jar>
+			
+			<mkdir dir="${scratch.dir}/one-jar/${@{module}.@{component}.artifact.name}/lib"/>
+			<dependencies-copy destination="${scratch.dir}/one-jar/${@{module}.@{component}.artifact.name}/lib" conf="@{module}"/>
+         
+         <unjar dest="${scratch.dir}/one-jar/${@{module}.@{component}.artifact.name}" src="${one-jar.component.dir}/one-jar-boot.jar">
+             <patternset>
+                 <include name="**/*.class"/>
+                 <include name=".version"/>   
+                 <include name="doc/**"/>   
+             </patternset>
+         </unjar>            
+
+         <mkdir dir="${artifact.dir}"/>
+         <jar basedir="${scratch.dir}/one-jar/${@{module}.@{component}.artifact.name}" destfile="${artifact.dir}/${@{module}.@{component}.artifact.name}.jar">
+            <manifest>
+               <attribute name="Main-Class" value="com.simontuffs.onejar.Boot"/>
+               <attribute name="Version" value="${build.revision}"/>
+               <attribute name="Build-Number" value="${build.number}"/>
+               <attribute name="Build-Time" value="${build.time}"/>
+               <attribute name="Build-Username" value="${build.username}"/>
+               <attribute name="Build-Machine" value="${build.machine}"/>
+            </manifest>
+         </jar>
+         <!--
+         <delete dir="${scratch.dir}/one-jar/${@{module}.@{component}.artifact.name}"/>
+         -->
+      </sequential>
+   </macrodef>
+
+   <target name="one-jar:package" depends="java:compile">
+         <one-jar-for-each-module-with-main-class>
+            <one-jar-package module="@{module}"/>
+         </one-jar-for-each-module-with-main-class>
+   </target>
+
+</project>

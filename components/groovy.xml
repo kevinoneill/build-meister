@@ -1,0 +1,152 @@
+<project xmlns:ac="local:net.sf.antcontrib" name="groovy">
+  <import file="base.xml" />
+
+  <property name="groovy.component.dir" value="${build.components.dir}/groovy" />
+  
+  <target name="groovy:compile" depends="-groovy:compile"/>
+	<target name="groovy:package" depends="-groovy:package"/>
+  
+  <path id="groovy.internal.classpath">
+    <fileset dir="${groovy.component.dir}">
+      <include name="**/*.jar" />
+    </fileset>
+  </path>
+  
+  <taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc">
+    <classpath refid="groovy.internal.classpath"/>
+ </taskdef>
+  
+  <taskdef name="groovy" classname="org.codehaus.groovy.ant.Groovy">
+    <classpath refid="groovy.internal.classpath"/>
+ </taskdef>
+  
+  <macrodef name="groovy-for-each-module-with-groovy">
+    <element name="tasks" implicit="true"/>
+    <sequential>
+      <for-each-module>
+        <ac:if>
+          <available file="@{module}${module.component.seperator}groovy"/>
+          <ac:then>
+            <tasks/>
+          </ac:then>
+        </ac:if>
+      </for-each-module>
+    </sequential>
+  </macrodef>
+  
+  <macrodef name="groovy-set-module-src-dir">
+     <attribute name="module"/>
+     <attribute name="component" default="core"/>
+     <sequential>
+       <ac:if>
+         <equals arg1="core" arg2="@{component}"/>
+         <ac:then>
+           <property name="groovy.module.@{module}-@{component}.src.dir" value="@{module}${module.component.seperator}groovy"/>
+         </ac:then>
+         <ac:else>
+           <property name="groovy.module.@{module}-@{component}.src.dir" value="@{module}${module.component.seperator}@{component}"/>
+         </ac:else>
+       </ac:if>
+     </sequential>
+   </macrodef>
+  
+  <macrodef name="groovy-compile">
+    <attribute name="module"/>
+    <attribute name="component" default="core"/>
+    <element name="compile-elements" implicit="yes" optional="yes"/>
+
+    <sequential>
+			<module-prepare-build-dir module="@{module}" component="@{component}"/>
+      <groovy-set-module-src-dir module="@{module}" component="@{component}"/>
+     
+      <dependencies-internal target="@{module}"/>
+      <dependencies-internal target="@{module}-@{component}"/>
+
+      <ac:outofdate>
+         <sourcefiles>
+           <pathelement path="${dependencies.@{module}.internal}"/>
+           <pathelement path="${dependencies.@{module}-@{component}.internal}"/>
+           <pathelement path="${basedir}/ivy.xml"/>
+         </sourcefiles>
+         <targetfiles path="${scratch.dir}/@{module}-@{component}-groovy-last-compiled"/>
+        <sequential>
+          <dependencies-fileset-shallow target="@{module}"/>
+          <dependencies-fileset-shallow target="@{module}-compile"/>
+          <dependencies-fileset-shallow target="@{module}-@{component}"/>
+          <dependencies-fileset-shallow target="@{module}-@{component}-compile"/>
+ 
+          <groovyc
+            srcdir="${basedir}/${groovy.module.@{module}-@{component}.src.dir}"
+            destdir="${@{module}-@{component}.build.dir}">
+            
+            <include name="**/*.groovy"/>
+            <include name="**/*.java"/>
+
+            <classpath>
+              <path refid="dependencies.@{module}.fileset.shallow"/>
+              <path refid="dependencies.@{module}-compile.fileset.shallow"/>
+              <path refid="dependencies.@{module}-@{component}.fileset.shallow"/>
+              <path refid="dependencies.@{module}-@{component}-compile.fileset.shallow"/>
+              <pathelement path="${dependencies.@{module}.internal}"/>
+              <pathelement path="${dependencies.@{module}-@{component}.internal}"/>
+            </classpath>
+
+            <compile-elements/>
+
+						<javac target="1.5"
+								 source="1.5"
+								 debug="true"/>
+           </groovyc>
+          
+          <copy todir="${@{module}-@{component}.build.dir}">
+            <fileset dir="${basedir}/${groovy.module.@{module}-@{component}.src.dir}">
+              <exclude name="**/*.groovy"/>
+              <exclude name="**/*.java"/>
+            </fileset>
+          </copy>
+
+          <touch file="${scratch.dir}/@{module}-@{component}-last-compiled"/>
+        </sequential>
+      </ac:outofdate>
+    </sequential>
+  </macrodef>
+
+	<macrodef name="groovy-zip-src">
+		<attribute name="module"/>
+		<attribute name="component" default="core"/>
+		<sequential>
+			<module-prepare-artifact-name module="@{module}" component="@{component}"/>
+			<zip destfile="${artifact.dir}/${@{module}.@{component}.artifact.name}-src.zip">
+			  <zipfileset dir="${basedir}/${groovy.module.@{module}-@{component}.src.dir}"/>
+			</zip>
+		</sequential>
+	</macrodef>
+
+	  <macrodef name="groovy-merge-source">
+    <sequential>
+      <mkdir dir="${scratch.dir}/all-source"/>
+      <groovy-for-each-module-with-groovy>
+        <copy todir="${scratch.dir}/all-source">
+          <fileset dir="${basedir}/@{module}${module.component.seperator}groovy">
+            <include name="**/*.groovy"/>
+						<include name="**/*.java"/>
+          </fileset>
+        </copy>
+      </groovy-for-each-module-with-groovy>
+    </sequential>
+  </macrodef>
+
+  <target name="-groovy:compile">
+    <groovy-for-each-module-with-groovy>
+      <groovy-compile module="@{module}"/>
+    </groovy-for-each-module-with-groovy>
+  </target>
+
+
+	<target name="-groovy:package" depends="-groovy:compile">
+		<groovy-for-each-module-with-groovy>
+			<groovy-zip-src module="@{module}"/>
+		</groovy-for-each-module-with-groovy>
+	</target>
+
+</project>

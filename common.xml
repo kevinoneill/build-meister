@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<project name="common-build" basedir=".">
+  <dirname property="build.base.dir" file="${ant.file.common-build}"/>
+  <property name="build.components.dir" value="${build.base.dir}/components"/>
+  
+  <property file="${basedir}/project.properties"/>
+
+  <import file="${build.components.dir}/base.xml"/>
+  <import file="${build.components.dir}/dependencies.xml"/>
+
+  <target name="clean" depends="base:clean" description="Delete build directory"/>
+  <target name="purge" depends="clean, dependencies:clean, dependencies:clear-cache" description="Clean Build Artifacts and Dependencies"/>
+  <target name="publish" depends="package, dependencies:publish" description="Publish the project to your local repository"/>
+  <target name="refresh" depends="base:init, dependencies:update"/>
+
+  <target name="package"/>
+  <target name="report"/>
+  
+  <target name="release" depends="clean, package, dependencies:release-minor"/>
+  
+  <target name="all" depends="clean, package, report, publish"/>
+  
+</project>

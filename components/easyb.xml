@@ -1,0 +1,129 @@
+<?xml version="1.0"?>
+<project xmlns:ac="local:net.sf.antcontrib" name="easyb">
+  <import file="base.xml" />
+  <import file="java.xml" />
+  <import file="coverage-cobertura.xml" />
+  <import file="dependencies.xml" />
+
+  <property name="easyb.component.dir" value="${build.components.dir}/easyb" />
+  <property name="easyb.report.text.dir" value="${report.dir}/easyb/text"/>
+  <property name="easyb.report.html.dir" value="${report.dir}/easyb/html"/>
+
+  <!-- public targets -->
+
+  <target name="easyb:test" depends="-easyb:test">
+    <ac:if>
+      <isset property="easyb.failed" />
+      <ac:then>
+        <fail message="Scenarios failed. Report generated." />
+      </ac:then>
+    </ac:if>
+  </target>
+
+  <target name="easyb:test-no-fail" depends="-easyb:test" />
+
+
+  <path id="easyb.internal.classpath">
+    <fileset dir="${easyb.component.dir}">
+      <include name="**/*.jar" />
+    </fileset>
+  </path>
+
+  <taskdef name="easyb" classname="org.disco.easyb.ant.BehaviorRunnerTask">
+    <classpath refid="easyb.internal.classpath"/>
+  </taskdef>
+  
+  <property name="easyb.includes.pattern" value="**/*Story.groovy" />
+
+  <macrodef name="for-each-module-with-stories">
+    <element name="tasks" implicit="true" />
+    <sequential>
+      <for-each-module>
+        <ac:if>
+          <available file="@{module}${module.component.seperator}stories" />
+          <ac:then>
+            <tasks />
+          </ac:then>
+          <ac:else>
+            <echo message="No stories found for module @{module}" />
+          </ac:else>
+        </ac:if>
+      </for-each-module>
+    </sequential>
+  </macrodef>
+  
+  <target name="-easyb:test" depends="coverage:instrument">
+    <for-each-module-with-stories>
+      <mkdir dir="${easyb.report.text.dir}" />
+      <mkdir dir="${easyb.report.html.dir}" />
+
+      <dependencies-internal target="@{module}" />
+      <dependencies-internal target="@{module}-unit-tests" />
+      <dependencies-path-transitive target="@{module}" />
+      <dependencies-path-transitive target="@{module}-unit-tests" />
+
+      <easyb failureproperty="easyb.failed">
+        <report location="${easyb.report.text.dir}/@{module}.txt" format="txtstory" />
+        <!-- report location="${easyb.report.html.dir}/@{module}.html" format="html" /-->
+        
+        <behaviors dir="@{module}${module.component.seperator}stories">
+          <include name="${easyb.includes.pattern}" />
+        </behaviors>
+        <classpath>
+          <pathelement path="${binary.dir}/@{module}-stories"/>
+ 
+          <path refid="coverage.path.@{module}.instrumented"/>
+ 
+          <pathelement path="${dependencies.@{module}.internal}"/>
+          <pathelement path="${dependencies.@{module}-unit-tests.internal}"/>
+          <path refid="dependencies.@{module}.fileset.transitive"/>
+          <path refid="dependencies.@{module}-unit-tests.fileset.transitive"/>
+          
+          <!-- kao: yuk yuk yuk -->
+          <path refid="easyb.internal.classpath"/>
+        </classpath>
+ 
+        <!--
+        <sysproperty key="java.awt.headless"
+            value="true"/>
+        <sysproperty key="net.sourceforge.cobertura.datafile"
+            file="${coverage.report.raw}"/>
+        -->
+      </easyb>
+
+      <!--
+      <junit failureproperty="easyb.failed" fork="yes" forkmode="once">
+        <jvmarg value="-ea"/>
+
+        <sysproperty key="net.sourceforge.cobertura.datafile"
+            file="${coverage.report.raw}"/>
+
+        <sysproperty key="java.awt.headless"
+            value="true"/>
+
+        <batchtest todir="${easyb.report.raw.dir}/@{module}">
+          <fileset dir="${binary.dir}/@{module}-stories">
+            <include name="${easyb.includes.pattern}"/>
+          </fileset>
+        </batchtest>
+        <formatter type="xml"/>
+
+        <classpath>
+          <pathelement path="${binary.dir}/@{module}-stories"/>
+ 
+          <path refid="coverage.path.@{module}.instrumented"/>
+          <pathelement path="${binary.dir}/@{module}-test-support"/>
+ 
+          <pathelement path="${dependencies.@{module}.internal}"/>
+          <pathelement path="${dependencies.@{module}-test-support.internal}"/>
+          <pathelement path="${dependencies.@{module}-unit-tests.internal}"/>
+          <path refid="dependencies.@{module}.fileset.transitive"/>
+          <path refid="dependencies.@{module}-test-support.fileset.transitive"/>
+          <path refid="dependencies.@{module}-unit-tests.fileset.transitive"/>
+        </classpath>
+      </junit>
+      -->
+    </for-each-module-with-stories>
+  </target>
+
+</project>

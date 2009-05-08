@@ -1,0 +1,141 @@
+<project xmlns:ac="local:net.sf.antcontrib" xmlns:sc="local:scala" name="scala">
+  <import file="base.xml" />
+
+  <property name="scala.component.dir" value="${build.components.dir}/scala" />
+  
+  <target name="scala:compile" depends="-scala:compile"/>
+	<target name="scala:package" depends="-scala:package"/>
+  
+  <path id="scala.internal.classpath">
+    <fileset dir="${scala.component.dir}">
+      <include name="**/*.jar" />
+    </fileset>
+  </path>
+	
+  <taskdef resource="scala/tools/ant/antlib.xml"  uri="local:scala">
+    <classpath refid="scala.internal.classpath"/>
+ </taskdef>
+
+  <macrodef name="scala-for-each-module-with-scala">
+    <element name="tasks" implicit="true"/>
+    <sequential>
+      <for-each-module>
+        <ac:if>
+          <available file="@{module}${module.component.seperator}scala"/>
+          <ac:then>
+            <tasks/>
+          </ac:then>
+        </ac:if>
+      </for-each-module>
+    </sequential>
+  </macrodef>
+  
+  <macrodef name="scala-set-module-src-dir">
+     <attribute name="module"/>
+     <attribute name="component" default="core"/>
+     <sequential>
+       <ac:if>
+         <equals arg1="core" arg2="@{component}"/>
+         <ac:then>
+           <property name="scala.module.@{module}-@{component}.src.dir" value="@{module}${module.component.seperator}scala"/>
+         </ac:then>
+         <ac:else>
+           <property name="scala.module.@{module}-@{component}.src.dir" value="@{module}${module.component.seperator}@{component}"/>
+         </ac:else>
+       </ac:if>
+     </sequential>
+   </macrodef>
+  
+  <macrodef name="scala-compile">
+    <attribute name="module"/>
+    <attribute name="component" default="core"/>
+    <element name="compile-elements" implicit="yes" optional="yes"/>
+
+    <sequential>
+			<module-prepare-build-dir module="@{module}" component="@{component}"/>
+      <scala-set-module-src-dir module="@{module}" component="@{component}"/>
+     
+      <dependencies-internal target="@{module}"/>
+      <dependencies-internal target="@{module}-@{component}"/>
+
+      <ac:outofdate>
+         <sourcefiles>
+           <pathelement path="${dependencies.@{module}.internal}"/>
+           <pathelement path="${dependencies.@{module}-@{component}.internal}"/>
+           <pathelement path="${basedir}/ivy.xml"/>
+         </sourcefiles>
+         <targetfiles path="${scratch.dir}/@{module}-@{component}-scala-last-compiled"/>
+        <sequential>
+          <dependencies-fileset-shallow target="@{module}"/>
+          <dependencies-fileset-shallow target="@{module}-compile"/>
+          <dependencies-fileset-shallow target="@{module}-@{component}"/>
+          <dependencies-fileset-shallow target="@{module}-@{component}-compile"/>
+
+          <sc:scalac
+            srcdir="${basedir}/${scala.module.@{module}-@{component}.src.dir}"
+            destdir="${@{module}-@{component}.build.dir}"
+						target="jvm-1.5">
+            
+            <include name="**/*.scala"/>
+
+            <classpath>
+              <path refid="dependencies.@{module}.fileset.shallow"/>
+              <path refid="dependencies.@{module}-compile.fileset.shallow"/>
+              <path refid="dependencies.@{module}-@{component}.fileset.shallow"/>
+              <path refid="dependencies.@{module}-@{component}-compile.fileset.shallow"/>
+              <pathelement path="${dependencies.@{module}.internal}"/>
+              <pathelement path="${dependencies.@{module}-@{component}.internal}"/>
+            </classpath>
+
+            <compile-elements/>
+          </sc:scalac>
+          
+          <copy todir="${@{module}-@{component}.build.dir}">
+            <fileset dir="${basedir}/${scala.module.@{module}-@{component}.src.dir}">
+              <exclude name="**/*.scala"/>
+            </fileset>
+          </copy>
+
+          <touch file="${scratch.dir}/@{module}-@{component}-last-compiled"/>
+        </sequential>
+      </ac:outofdate>
+    </sequential>
+  </macrodef>
+
+	<macrodef name="scala-merge-source">
+    <sequential>
+      <mkdir dir="${scratch.dir}/all-source"/>
+      <scala-for-each-module-with-scala>
+        <copy todir="${scratch.dir}/all-source">
+          <fileset dir="${basedir}/@{module}${module.component.seperator}scala">
+            <include name="**/*.scala"/>
+          </fileset>
+        </copy>
+      </scala-for-each-module-with-scala>
+    </sequential>
+  </macrodef>
+
+	<macrodef name="scala-zip-src">
+		<attribute name="module"/>
+		<attribute name="component" default="core"/>
+		<sequential>
+			<module-prepare-artifact-name module="@{module}" component="@{component}"/>
+			<zip destfile="${artifact.dir}/${@{module}.@{component}.artifact.name}-src.zip">
+			  <zipfileset dir="${basedir}/${scala.module.@{module}-@{component}.src.dir}"/>
+			</zip>
+		</sequential>
+	</macrodef>
+
+  <target name="-scala:compile">
+    <scala-for-each-module-with-scala>
+      <scala-compile module="@{module}"/>
+    </scala-for-each-module-with-scala>
+  </target>
+
+	<target name="-scala:package" depends="-scala:compile">
+		<scala-for-each-module-with-scala>
+			<scala-zip-src module="@{module}"/>
+		</scala-for-each-module-with-scala>
+	</target>
+
+</project>

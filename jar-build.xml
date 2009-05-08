@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<project name="jar-build" basedir="." default="build">
+
+  <property name="build.version" value="dev"/>
+  <dirname property="build.base.dir" file="${ant.file.jar-build}"/>
+
+  <import file="${build.base.dir}/common.xml"/>
+
+  <import file="${build.components.dir}/java.xml"/>
+	<import file="${build.components.dir}/jar.xml"/>	
+  <import file="${build.components.dir}/unit.xml"/>
+  <import file="${build.components.dir}/checkstyle.xml"/>
+  <import file="${build.components.dir}/findbugs.xml"/>
+
+  <target name="report" depends="test, coverage:report, unit:report, findbugs:report, checkstyle:report, dependencies:report" description="generate coverage and analysis reports"/>
+  <target name="package" depends="compile, java:package, unit:package" description="package the jars"/>
+
+	<target name="compile" depends="base:init, java:compile"/>
+  <target name="test" depends="compile, unit:test" description="execute unit tests"/>
+  <target name="document" depends="base:init, java:document" description="create javadoc"/>
+  <target name="publish" depends="package, test, dependencies:publish" description="publish the jar to the project repository"/>
+
+  <target name="all" depends="clean, compile, package, test, report, document, publish" description="do everything"/>
+  
+  <target name="build" depends="clean, test, package" description="clean, build, test and package jar"/>
+</project>

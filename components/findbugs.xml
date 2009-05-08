@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<project name="findbugs" xmlns:fb="local:edu.umd.cs.findbugs">
+
+	<import file="base.xml"/>
+	<import file="java.xml"/>
+
+	<property name="findbugs.component.dir" value="${build.components.dir}/findbugs"/>
+	<property name="findbugs.report.dir" value="${report.dir}/findbugs"/>
+
+	<taskdef
+		resource="edu/umd/cs/findbugs/anttask/tasks.properties"
+		classpath="${findbugs.component.dir}/lib/findbugs-ant.jar"
+		uri="local:edu.umd.cs.findbugs"/>
+
+	<!-- private targets -->
+	<target name="-findbugs:analyze" depends="java:compile">
+
+		<mkdir dir="${findbugs.report.dir}"/>
+
+		<java-for-each-module-with-java>
+      <dependencies-internal target="@{module}"/>
+      <dependencies-path-transitive target="@{module}"/>
+      <dependencies-path-transitive target="@{module}-compile"/>
+
+			<fb:findbugs home="${findbugs.component.dir}"
+					  output="xml:withMessages"
+					  outputFile="${findbugs.report.dir}/findbugs-report-@{module}.xml"
+					  errorProperty="findbugs.failed">
+				<sourcePath path="${basedir}/@{module}${module.component.seperator}java"/>
+				<class location="${binary.dir}/@{module}"/>
+				<auxClasspath>
+         <pathelement path="${dependencies.@{module}.internal}"/>
+          <path refid="dependencies.@{module}.fileset.transitive"/>
+					<path refid="dependencies.@{module}-compile.fileset.transitive"/>					
+				</auxClasspath>
+			</fb:findbugs>
+
+		</java-for-each-module-with-java>
+	</target>
+
+	<target name="-findbugs:report" depends="-findbugs:analyze">
+		<java-for-each-module-with-java>
+			<xslt style="${findbugs.component.dir}/src/xsl/default.xsl"
+				   in="${findbugs.report.dir}/findbugs-report-@{module}.xml"
+				   out="${findbugs.report.dir}/findbugs-report-@{module}.html"/>
+		</java-for-each-module-with-java>
+	</target>
+
+	<!-- public targets -->
+	<target name="findbugs:analyze" depends="-findbugs:analyze">
+		<fail if="findbugs.failed" message="Findbugs failed"/>
+	</target>
+  
+	<target name="findbugs:report" depends="-findbugs:report">
+		<fail if="findbugs.failed" message="Findbugs failed"/>
+	</target>
+
+</project>

@@ -1,0 +1,11 @@
+<project name="j2ee-1.4">
+  <import file="base.xml"/>
+
+  <property name="j2ee-1.4.component.dir" value="${build.components.dir}/j2ee-1.4"/>
+
+  <path id="java.project.runtime.classpath">
+    <fileset dir="${j2ee-1.4.component.dir}">
+      <include name="*.jar"/>
+    </fileset>
+  </path>
+</project>

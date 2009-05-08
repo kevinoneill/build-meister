@@ -1,0 +1,95 @@
+<?xml version="1.0"?>
+<project name="jar" xmlns:ac="local:net.sf.antcontrib">
+
+  <import file="base.xml"/>
+
+  <property name="jar.component.dir" value="${build.components.dir}/jar"/>
+
+  <!-- public targets -->
+
+  <target name="jar:package" depends="-jar:package"/>
+
+  <macrodef name="jar-prepare-artifact-name">
+    <attribute name="module"/>
+	  <attribute name="component" default="core"/>
+    <sequential>
+      <prepare-module-name module="@{module}"/>
+	    <ac:if>
+	      <equals arg1="@{component}" arg2="core" />
+	      <ac:then>
+		      <property name="java.@{module}.@{component}.artifact.name" value="${@{module}.name}"/>
+	      </ac:then>
+	      <ac:else>
+		      <property name="java.@{module}.@{component}.artifact.name" value="${@{module}.name}-@{component}"/>
+	      </ac:else>
+	    </ac:if>
+    </sequential>
+  </macrodef>
+
+  <macrodef name="jar-for-each-module-with-binary">
+	  <attribute name="component" default="core"/>		
+    <element name="tasks" implicit="true"/>
+    <sequential>
+      <for-each-module>
+				<module-prepare-build-dir module="@{module}" component="@{component}"/>
+        <ac:if>
+					<resourcecount when="greater" count="0">
+						<filelist dir="{binary.dir}/{@{module}-@{component}.build.dir}" files="**/*" />					
+					</resourcecount>
+          <ac:then>
+            <tasks/>
+          </ac:then>
+        </ac:if>
+      </for-each-module>
+    </sequential>
+  </macrodef>
+
+  <macrodef name="jar-create-version-properties">
+    <attribute name="module"/>
+    <attribute name="destination" default="${binary.dir}/@{module}/META-INF/version.properties"/>
+    <sequential>
+      <prepare-module-name module="@{module}"/>
+      <copy file="${jar.component.dir}/version.properties" toFile="@{destination}" overwrite="true">
+        <filterset begintoken="{" endtoken="}">
+          <filter token="module" value="${@{module}.name}"/>
+          <filter token="build.revision" value="${build.revision}"/>
+          <filter token="build.username" value="${build.username}"/>
+          <filter token="build.number" value="${build.number}"/>
+          <filter token="build.time" value="${build.time}"/>
+          <filter token="build.machine" value="${build.machine}"/>
+        </filterset>
+      </copy>
+    </sequential>
+  </macrodef>
+
+	<macrodef name="jar-jar">
+		<attribute name="module"/>
+		<attribute name="component" default="core"/>
+		<element name="manifest-attributes" optional="true"/>
+		<sequential>
+			<module-prepare-artifact-name module="@{module}" component="@{component}"/>
+			<jar-create-version-properties module="@{module}"/>
+			<jar basedir="${@{module}-@{component}.build.dir}" destfile="${artifact.dir}/${@{module}.@{component}.artifact.name}.jar">
+			  <manifest>
+			    <attribute name="Built-By" value="${user.name}"/>
+			    <attribute name="Version" value="${build.revision}"/>
+			    <attribute name="Build-Number" value="${build.number}"/>
+			    <attribute name="Build-Time" value="${build.time}"/>
+			    <attribute name="Build-Username" value="${build.username}"/>
+			    <attribute name="Build-Machine" value="${build.machine}"/>
+				  <manifest-attributes/>
+			  </manifest>
+			</jar>
+		</sequential>
+	</macrodef>
+	
+  <target name="-jar:package" depends="base:init">
+    <mkdir dir="${artifact.dir}"/>
+    <jar-for-each-module-with-binary>
+      <jar-jar module="@{module}"/>
+    </jar-for-each-module-with-binary>
+  </target>
+
+
+
+</project>

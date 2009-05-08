@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<project name="project-build" basedir="." default="clean-publish">
+
+  <dirname property="build.base.dir" file="${ant.file.project-build}"/>
+  <property name="build.components.dir" value="${build.base.dir}/components"/>
+
+  <import file="${build.components.dir}/version.xml"/>
+  <import file="${build.components.dir}/dependencies.xml"/>
+
+  <macrodef name="project-for-each-with-version">
+    <attribute name="target"/>
+    <sequential>
+      <dependencies-for-each-project target="@{target}">
+        <property name="build.home" value="${build.home}"/>
+        
+        <property name="release.major" value="${release.major}" />
+        <property name="release.minor" value="${release.minor}" />
+        <property name="build.number" value="${build.number}" />
+        <property name="build.revision" value="${build.revision}" />
+        <property name="build.username" value="${build.username}" />
+      </dependencies-for-each-project>
+    </sequential> 
+  </macrodef>
+
+  <target name="publish" description="Locally publish all projects">
+    <project-for-each-with-version target="publish"/>
+  </target>
+
+  <target name="clean" depends="dependencies:clear-cache" description="Remove the build directory and caches for all project">
+    <project-for-each-with-version target="clean"/>
+  </target>
+
+  <target name="refresh" description="Refresh the generated ide lib directory for all projects">
+    <project-for-each-with-version target="refresh"/>
+  </target>
+
+  <target name="purge" description="Remove the build directory and other build generated directories and files for all projects">
+    <project-for-each-with-version target="purge"/>
+  </target>
+
+  <target name="report" description="Generate reports for all projects">
+    <project-for-each-with-version target="report"/>
+  </target>
+  
+  <target name="all">
+    <project-for-each-with-version target="all"/>
+  </target>
+  
+  <target name="clean-publish">
+    <project-for-each-with-version target="clean"/>
+    <project-for-each-with-version target="publish"/>
+  </target>
+</project>

@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<project name="version">
+
+  <property environment="env"/>
+
+  <!-- version properties -->
+
+  <tstamp>
+    <format property="build.time" pattern="yyyyMMddHHmmss" />
+  </tstamp>
+  <property file="${basedir}/revision" />
+
+  <property name="release.major" value="0" />
+  <property name="release.minor" value="1" />
+
+  <property name="label" value="${build.time}-${user.name}" />
+
+  <property name="build.machine" value="${env.HOSTNAME}" />
+  <property name="build.number" value="${label}" />
+  <property name="build.revision" value="${release.major}.${release.minor}.${build.number}" />
+  <property name="build.username" value="${user.name}" />
+</project>

@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<ivysettings>
+	<caches useOrigin="true">
+		<cache name="remote-cache" basedir="${dependencies.third-party.cache}" 
+			ivyPattern="[organisation]/[module]/metadata/ivy-[revision].xml" artifactPattern="[organisation]/[module]/[type]s/[artifact]-[revision].[ext]">
+		</cache>
+	</caches>
+	<settings defaultResolver="chain" defaultConflictManager="latest-revision"/>
+	<resolvers>
+		<chain name="chain" returnFirst="true">
+			<filesystem name="project-local" checkmodified="true">
+				<ivy pattern="${dependencies.project-local.repository}/[organisation]/[module]/metadata/ivy-[revision].xml"/>
+				<artifact pattern="${dependencies.project-local.repository}/[organisation]/[module]/[type]s/[artifact]-[revision].[ext]"/>
+			</filesystem>
+			<chain name="third-party" returnFirst="true">
+				<filesystem name="third-party-local" checkmodified="true">
+					<ivy pattern="${dependencies.third-party-local.repository}/[organisation]/[module]/metadata/ivy-[revision].xml"/>
+					<artifact pattern="${dependencies.third-party-local.repository}/[organisation]/[module]/[type]s/[artifact]-[revision].[ext]"/>
+				</filesystem>
+        <url name="third-party-shared">
+          <ivy pattern="${dependencies.third-party.repository}/[organisation]/[module]/metadata/ivy-[revision].xml"/>
+          <artifact pattern="${dependencies.third-party.repository}/[organisation]/[module]/[type]s/[artifact]-[revision].[ext]"/>
+        </url>
+				<filesystem name="third-party-cache" checkmodified="true">
+					<ivy pattern="${dependencies.third-party.cache}/[organisation]/[module]/metadata/ivy-[revision].xml"/>
+					<artifact pattern="${dependencies.third-party.cache}/[organisation]/[module]/[type]s/[artifact]-[revision].[ext]"/>
+				</filesystem>
+				<!--
+				<ibiblio name="java.net" root="http://download.java.net/maven/2/" pattern="[organisation]/[module]/[revision]/[module]-[revision].[ext]" m2compatible="true" cache="remote-cache"/>
+				<ibiblio name="codehaus" root="http://repository.codehaus.org/" pattern="[organisation]/[module]/[revision]/[module]-[revision].[ext]" m2compatible="true" cache="remote-cache"/>
+				<ibiblio name="maven" root="http://repo1.maven.org/maven2/" m2compatible="true" cache="remote-cache"/>
+				<ibiblio name="camel-extra" root="http://camel-extra.googlecode.com/svn/maven2/releases" pattern="[organisation]/[module]/[revision]/[module]-[revision].[ext]" m2compatible="true" cache="remote-cache"/>
+        -->
+			</chain>
+		</chain>
+	</resolvers>
+</ivysettings>

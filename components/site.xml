@@ -1,0 +1,55 @@
+<?xml version="1.0"?>
+<project name="site" xmlns:ac="local:net.sf.antcontrib">
+
+  <import file="base.xml"/>
+  <import file="java.xml"/>
+  <import file="unit.xml"/>
+  <import file="checkstyle.xml"/>
+  <import file="findbugs.xml"/>
+
+  <property name="site.component.dir" value="${build.components.dir}/site"/>
+
+  <target name="-site:publish-doc" depends="java:document">
+    <for-each-module>
+      <copy todir="${local-gateway.path}/gateway/${ant.project.name}/docs/@{src.dir}">
+	<fileset dir="${java.docs.dir}/@{src.dir}">
+	  <include name="**/*"/>
+	</fileset>
+      </copy>
+    </for-each-module>
+  </target>
+
+  <target name="-site:index" depends="">
+
+    <!-- 
+	 TODO this is an interim hack that only supports a single
+	 "main" module... it needs to be redone to dynamically
+	 include arbitrary report output.
+      -->
+    <copy todir="${local-gateway.path}/gateway/${ant.project.name}">
+      <fileset file="${site.component.dir}/index.html"/>
+    </copy>
+    <replace file="${local-gateway.path}/gateway/${ant.project.name}/index.html">
+      <replacefilter token="@project@" value="${ant.project.name}"/>
+      <replacefilter token="@module@" value="main"/>
+    </replace>
+
+  </target>
+
+  <target name="-site:publish-reports" depends="java:document, unit:report, coverage:report, checkstyle:report, findbugs:report">
+
+    <mkdir dir="${local-gateway.path}/gateway/${ant.project.name}/reports"/>
+
+    <copy todir="${local-gateway.path}/gateway/${ant.project.name}/reports">
+      <fileset dir="${report.dir}">
+	<include name="**/*"/>
+      </fileset>
+    </copy>
+
+  </target>
+
+  <!-- public targets -->
+
+  <target name="site:publish" depends="-site:publish-doc, unit:test, -site:publish-reports, -site:index"/>
+
+</project>

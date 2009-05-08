@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<project name="ear" xmlns:ac="local:net.sf.antcontrib" xmlns:ivy="local:fr.jayasoft.ivy.ant">
+
+	<import file="base.xml"/>
+	<import file="dependencies.xml"/>
+
+  <property name="ear.package.conf" value="main"/>
+	<property name="ear.build.dir" value="${artifact.dir}"/>
+  <property name="ear.lib.dir" value="${build.dir}/scratch/ear/libs"/>
+  <property name="ear.dir" value="${build.components.dir}/ear"/>
+
+	<property name="ear.src.dir" value="ear"/>
+
+	<!-- macros -->
+
+  <macrodef name="ear-package">
+    <attribute name="src-dir" default="${ear.src.dir}"/>
+    <attribute name="lib-dir" default="${ear.lib.dir}"/>
+    <attribute name="target-dir" default="${ear.build.dir}"/>
+    <sequential>
+      <mkdir dir="@{target-dir}"/>
+
+      <ear destfile="@{target-dir}/${ant.project.name}.ear"
+         appxml="@{src-dir}/META-INF/application.xml">
+
+        <fileset dir="@{src-dir}">
+          <exclude name="META-INF/application.xml"/>
+        </fileset>
+        <fileset dir="@{lib-dir}">
+          <include name="*.jar"/>
+          <include name="*.war"/>
+        </fileset>
+      </ear>
+    </sequential>
+  </macrodef>
+
+	<target name="ear:package">
+    <mkdir dir="${ear.lib.dir}"/>
+    <dependencies-copy destination="${ear.lib.dir}" conf="${ear.package.conf}" types="war,ejb,jar"/>
+    <ear-package/>
+	</target>
+
+</project>

@@ -1,0 +1,66 @@
+<?xml version="1.0"?>
+<project name="checkstyle" xmlns:cs="local:com.puppycrawl.tools.checkstyle" xmlns:ac="local:net.sf.antcontrib">
+
+	<import file="base.xml"/>
+	<import file="java.xml"/>
+	<import file="dependencies.xml"/>
+
+	<property name="checkstyle.dir" value="${build.components.dir}/checkstyle"/>
+	<property name="checkstyle.report.dir" value="${report.dir}/checkstyle"/>
+	<property name="checkstyle.checks" value="${checkstyle.dir}/checks.xml"/>
+
+	<path id="checkstyle.lib.path">
+		<fileset dir="${checkstyle.dir}">
+			<include name="*.jar"/>
+		</fileset>
+	</path>
+
+	<taskdef
+		classpathref="checkstyle.lib.path"
+		resource="com/puppycrawl/tools/checkstyle/antlib.xml"
+		uri="local:com.puppycrawl.tools.checkstyle"/>
+
+	<!-- private targets -->
+	<target name="-checkstyle:analyze">
+		<mkdir dir="${checkstyle.report.dir}"/>
+
+		<java-for-each-module-with-java>
+			<dependencies-fileset-shallow target="@{module}"/>
+			<dependencies-fileset-shallow target="@{module}-compile"/>
+
+			<cs:checkstyle config="${checkstyle.checks}"
+										 failOnViolation="no"
+										 failureProperty="checkstyle.failed"
+										 maxWarnings="50">
+
+				<fileset dir="${basedir}/@{module}${module.component.seperator}java">
+					<include name="**/*.java"/>
+				</fileset>
+				
+				<classpath>
+					<path refid="dependencies.@{module}.fileset.shallow"/>
+					<path refid="dependencies.@{module}-compile.fileset.shallow"/>
+					<pathelement path="${dependencies.@{module}.internal}"/>
+				</classpath>
+
+				<formatter type="xml" tofile="${checkstyle.report.dir}/checkstyle-report.xml"/>
+				<!--<formatter type="plain" usefile="false"/>-->
+
+			</cs:checkstyle>
+		</java-for-each-module-with-java>
+	</target>
+
+	<target name="-checkstyle:report" depends="-checkstyle:analyze">
+		<xslt style="${checkstyle.dir}/checkstyle-noframes-sorted.xsl"
+					in="${checkstyle.report.dir}/checkstyle-report.xml"
+					out="${checkstyle.report.dir}/checkstyle-report.html"/>
+	</target>
+
+	<!-- public targets -->
+	<target name="checkstyle:analyze" depends="-checkstyle:analyze">
+		<fail if="checkstyle.failed" message="Checkstyle failed"/>
+	</target>
+
+	<target name="checkstyle:report" depends="-checkstyle:report"/>
+
+</project>

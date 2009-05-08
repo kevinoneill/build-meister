@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<project name="ear-build" basedir="." default="build">
+
+  <property name="build.version" value="dev"/>
+
+  <dirname property="build.base.dir" file="${ant.file.ear-build}"/>
+  <property name="build.components.dir" value="${build.base.dir}/components"/>
+
+  <property name="dependencies.default.conf" value="package"/>
+
+  <import file="${build.base.dir}/common.xml"/>
+
+  <import file="${build.components.dir}/base.xml"/>
+  <import file="${build.components.dir}/ear.xml"/>
+  <import file="${build.components.dir}/dependencies.xml"/>
+  <import file="${build.components.dir}/site.xml"/>
+
+  <target name="clean" depends="base:clean, dependencies:clean" description="Delete build directory"/>
+
+  <target name="report" depends="dependencies:report"/>
+  <target name="package" depends="base:init, ear:package" description="Package the Enterprise Application Archive"/>
+  <target name="release-minor" depends="package, dependencies:release-minor"/>
+  <target name="release-major" depends="package, dependencies:release-major"/>
+  <target name="refresh"/>
+
+  <target name="all" depends="package"/>
+  <target name="build" depends="package"/>
+
+</project>

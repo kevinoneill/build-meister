@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<project name="antlr" xmlns:ac="local:net.sf.antcontrib" xmlns:antlr="local:org.apache.tools.ant.antlr">
+
+   <import file="base.xml"/>
+
+   <property name="antlr.component.dir" value="${build.components.dir}/antlr"/>
+   <property name="antlr.scratch.dir" value="${scratch.dir}/antlr"/>
+   <property name="antlr.src.dir" value="grammar"/>
+
+   <!-- task def -->
+   <taskdef
+         resource="org/apache/tools/ant/antlr/antlib.xml"
+         uri="local:org.apache.tools.ant.antlr">
+      <classpath>
+         <fileset dir="${antlr.component.dir}">
+            <include name="**/*.jar"/>
+         </fileset>
+      </classpath>
+   </taskdef>
+   
+   <macrodef name="antlr-generate">
+      <attribute name="package"/>
+      <attribute name="grammar"/>
+      <attribute name="toDir" default="${antlr.scratch.dir}"/>
+      <sequential>
+         <mkdir dir="@{toDir}/@{package}"/>
+         <antlr:antlr3 
+            target="${antlr.src.dir}/@{grammar}" 
+            outputdirectory="@{toDir}/@{package}"/>
+      </sequential>
+   </macrodef>
+   
+   <target name="antlr:compile" >
+   </target>
+
+</project>

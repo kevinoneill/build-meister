@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<project name="war-build" basedir="." default="build">
+  <dirname property="build.base.dir" file="${ant.file.war-build}"/>
+
+  <import file="${build.base.dir}/common.xml"/>
+  <import file="${build.components.dir}/war.xml"/>
+  <import file="${build.components.dir}/checkstyle.xml"/>
+  <import file="${build.components.dir}/findbugs.xml"/>
+
+  <target name="package" depends="base:init, unit:test, war:package" description="Package the Web Application Archive"/>
+  <target name="report" depends="base:init, coverage:report, unit:report, checkstyle:report, dependencies:report" description="generate coverage and analysis reports"/>
+
+  <target name="test" depends="base:init, unit:test" description="execute unit tests"/>
+  <target name="document" depends="base:init, java:document" description="create javadoc"/>
+
+  <target name="all" depends="package, test, report, document, publish" description="do everything"/>
+
+  <target name="refresh" depends="base:init, dependencies:refresh" description="Update project dependencies for ide usage"/>
+  <target name="build" depends="refresh, test, package" description="build, test and package jar"/>
+
+</project>

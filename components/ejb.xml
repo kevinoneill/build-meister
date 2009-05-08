@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<project name="ejb" xmlns:ac="local:net.sf.antcontrib">
+
+  <import file="base.xml"/>
+  <import file="dependencies.xml"/>
+  <import file="java.xml"/>
+
+  <target name="ejb:package" depends="-ejb:package"/>
+
+  <target name="-ejb:package" depends="java:package">
+    <mkdir dir="${artifact.dir}"/>
+    <java-for-each-module-with-java>
+      <dependencies-manifest-classpath module="@{module}"/>
+	    <java-jar module="@{module}">
+				<manifest-attributes>
+					<attribute name="Class-Path" value="${@{module}.manifest.classpath}"/>
+				</manifest-attributes>
+		  </java-jar>
+    </java-for-each-module-with-java>
+  </target>
+</project>

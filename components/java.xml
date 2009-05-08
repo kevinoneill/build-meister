@@ -1,0 +1,183 @@
+<?xml version="1.0"?>
+<project name="java" xmlns:ac="local:net.sf.antcontrib">
+
+  <import file="base.xml"/>
+	<import file="jar.xml"/>
+  <import file="dependencies.xml"/>
+
+  <!-- public targets -->
+
+  <target name="java:compile" depends="-java:compile"/>
+  <target name="java:package" depends="java:compile, jar:package, -java:package-src"/>
+  <target name="java:document" depends="-java:document, -java:package-doc"/>
+
+  <!-- properties -->
+  <property name="java.src.version" value="1.5"/>
+
+  <property name="java.docs.dir" value="${build.dir}/docs/api"/>
+  <property name="java.component.dir" value="${build.components.dir}/java"/>
+
+  <!-- macros -->
+
+  <macrodef name="java-set-module-src-dir">
+    <attribute name="module"/>
+    <attribute name="component" default="core"/>
+    <sequential>
+      <ac:if>
+        <equals arg1="core" arg2="@{component}"/>
+        <ac:then>
+          <property name="java.module.@{module}-@{component}.src.dir" value="@{module}${module.component.seperator}java"/>
+        </ac:then>
+        <ac:else>
+          <property name="java.module.@{module}-@{component}.src.dir" value="@{module}${module.component.seperator}@{component}"/>
+        </ac:else>
+      </ac:if>
+    </sequential>
+  </macrodef>
+
+  <macrodef name="java-compile">
+    <attribute name="module"/>
+    <attribute name="component" default="core"/>
+    <element name="compile-elements" implicit="yes" optional="yes"/>
+
+    <sequential>
+			<module-prepare-build-dir module="@{module}" component="@{component}"/>
+      <java-set-module-src-dir module="@{module}" component="@{component}"/>
+      
+      <dependencies-internal target="@{module}"/>
+      <dependencies-internal target="@{module}-@{component}"/>
+
+      <ac:outofdate>
+        <sourcefiles>
+          <pathelement path="${dependencies.@{module}.internal}"/>
+          <pathelement path="${dependencies.@{module}-@{component}.internal}"/>
+          <pathelement path="${basedir}/ivy.xml"/>
+        </sourcefiles>
+        <targetfiles path="${scratch.dir}/@{module}-@{component}-last-compiled"/>
+        <sequential>
+          <dependencies-fileset-shallow target="@{module}"/>
+          <dependencies-fileset-shallow target="@{module}-compile"/>
+          <dependencies-fileset-shallow target="@{module}-@{component}"/>
+          <dependencies-fileset-shallow target="@{module}-@{component}-compile"/>
+
+          <javac target="${java.src.version}"
+              source="${java.src.version}"
+              srcdir="${basedir}/${java.module.@{module}-@{component}.src.dir}"
+              destdir="${@{module}-@{component}.build.dir}"
+              debug="true">
+            <include name="**/*.java"/>
+            <classpath>
+              <path refid="dependencies.@{module}.fileset.shallow"/>
+              <path refid="dependencies.@{module}-compile.fileset.shallow"/>
+              <path refid="dependencies.@{module}-@{component}.fileset.shallow"/>
+              <path refid="dependencies.@{module}-@{component}-compile.fileset.shallow"/>
+              <pathelement path="${dependencies.@{module}.internal}"/>
+              <pathelement path="${dependencies.@{module}-@{component}.internal}"/>
+            </classpath>
+            <compile-elements/>
+          </javac>
+          <copy todir="${@{module}-@{component}.build.dir}">
+            <fileset dir="${basedir}/${java.module.@{module}-@{component}.src.dir}">
+              <exclude name="**/*.java"/>
+            </fileset>
+          </copy>
+
+          <touch file="${scratch.dir}/@{module}-@{component}-last-compiled"/>
+        </sequential>
+      </ac:outofdate>
+    </sequential>
+  </macrodef>
+
+  <macrodef name="java-merge-source">
+    <sequential>
+      <mkdir dir="${scratch.dir}/all-source"/>
+      <java-for-each-module-with-java>
+        <copy todir="${scratch.dir}/all-source">
+          <fileset dir="${basedir}/@{module}${module.component.seperator}java">
+            <include name="**/*.java"/>
+          </fileset>
+        </copy>
+      </java-for-each-module-with-java>
+    </sequential>
+  </macrodef>
+
+  <macrodef name="java-for-each-module-with-java">
+    <element name="tasks" implicit="true"/>
+    <sequential>
+      <for-each-module>
+        <ac:if>
+          <available file="@{module}${module.component.seperator}java"/>
+          <ac:then>
+            <tasks/>
+          </ac:then>
+        </ac:if>
+      </for-each-module>
+    </sequential>
+  </macrodef>
+  
+	<macrodef name="java-zip-src">
+		<attribute name="module"/>
+		<attribute name="component" default="core"/>
+		<sequential>
+			<module-prepare-artifact-name module="@{module}" component="@{component}"/>
+			<zip destfile="${artifact.dir}/${@{module}.@{component}.artifact.name}-src.zip">
+			  <zipfileset dir="${basedir}/${java.module.@{module}-@{component}.src.dir}"/>
+			</zip>
+		</sequential>
+	</macrodef>
+
+  <target name="-java:compile">
+    <java-for-each-module-with-java>
+      <java-compile module="@{module}"/>
+    </java-for-each-module-with-java>
+  </target>
+
+  <target name="-java:document">
+    <java-for-each-module-with-java>
+      <ac:if>
+        <not>
+          <uptodate targetfile="${java.docs.dir}/@{module}.updated">
+            <srcfiles dir="${basedir}/@{module}${module.component.seperator}java" defaultexcludes="yes">
+              <include name="**/*.java"/>
+            </srcfiles>
+          </uptodate>
+        </not>
+        <ac:then>
+          <javadoc
+              destdir="${java.docs.dir}/@{module}"
+              author="true"
+              version="true"
+              use="true">
+
+            <fileset dir="${basedir}/@{module}${module.component.seperator}java" defaultexcludes="yes">
+              <include name="**/*.java"/>
+            </fileset>
+            <link href="http://java.sun.com/j2se/1.4.2/docs/api/"
+                packagelistLoc="${java.component.dir}/jdk-1.4.2-package-list"
+                offline="true"/>
+          </javadoc>
+          <touch file="${java.docs.dir}/@{module}.updated"/>
+        </ac:then>
+      </ac:if>
+    </java-for-each-module-with-java>
+  </target>
+
+  <target name="-java:package-src">
+    <mkdir dir="${artifact.dir}"/>
+    <java-for-each-module-with-java>
+	    <java-zip-src module="@{module}"/>
+    </java-for-each-module-with-java>
+  </target>
+
+  <target name="-java:package-doc" depends="-java:document">
+    <mkdir dir="${artifact.dir}"/>
+    <java-for-each-module-with-java>
+      <module-prepare-artifact-name module="@{module}" component="java"/>
+      <zip destfile="${artifact.dir}/${@{module}.java.artifact.name}-doc.zip">
+        <zipfileset dir="${java.docs.dir}/@{module}"/>
+      </zip>
+    </java-for-each-module-with-java>
+  </target>
+
+
+</project>
