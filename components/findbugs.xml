@@ -23,9 +23,10 @@
       <dependencies-path-transitive target="@{module}-compile"/>
 
 			<fb:findbugs home="${findbugs.component.dir}"
+			        effort="max"
 					  output="xml:withMessages"
 					  outputFile="${findbugs.report.dir}/findbugs-report-@{module}.xml"
-					  errorProperty="findbugs.failed">
+					  warningsProperty="findbugs.failed">
 				<sourcePath path="${basedir}/@{module}${module.component.seperator}java"/>
 				<class location="${binary.dir}/@{module}"/>
 				<auxClasspath>
