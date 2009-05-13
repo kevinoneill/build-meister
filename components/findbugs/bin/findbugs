@@ -68,8 +68,9 @@ fi
 
 maxheap=768
 
+fb_appjar="$findbugs_home/lib/findbugs.jar"
+
 ShowHelpAndExit() {
-	fb_appjar="$findbugs_home/lib/findbugsGUI.jar"
 	fb_mainclass="edu.umd.cs.findbugs.ShowHelp"
 	fb_javacmd=${fb_javacmd:-"java"}
 fb_maxheap=${fb_maxheap:-"-Xmx584m"}
@@ -84,7 +85,6 @@ exec "$fb_javacmd" \
 }
 
 # Set defaults
-fb_appjar="$findbugs_home/lib/findbugsGUI.jar"
 fb_mainclass="edu.umd.cs.findbugs.LaunchAppropriateUI"
 user_jvmargs=''
 ea_arg=''
@@ -105,7 +105,6 @@ while [ $# -gt 0 ]; do
 		;;
 
 	-textui)
-		fb_appjar="$findbugs_home/lib/findbugs.jar"
 		fb_mainclass="edu.umd.cs.findbugs.FindBugs2"
 		;;
 

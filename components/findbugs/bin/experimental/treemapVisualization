@@ -1,7 +1,5 @@
 #! /bin/sh
 
-# Generate a defect density table from a bug collection
-
 program="$0"
 
 # Follow symlinks until we get to the actual file.
@@ -62,7 +60,7 @@ if [ ! -z "$JAVA_HOME" ] && [ -x "$JAVA_HOME/bin/java" ]; then
 	fi
 fi
 
-fb_mainclass=edu.umd.cs.findbugs.workflow.DefectDensity
+fb_mainclass=edu.umd.cs.findbugs.workflow.TreemapVisualization
 
 fb_javacmd=${fb_javacmd:-"java"}
 fb_maxheap=${fb_maxheap:-"-Xmx584m"}
