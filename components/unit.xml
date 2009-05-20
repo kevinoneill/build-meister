@@ -17,6 +17,8 @@
       </ac:then>
     </ac:if>
   </target>
+  
+  <target name="test:compile" depends="-unit:compile"/>
 
   <target name="unit:test-no-fail" depends="-unit:test"/>
   <target name="unit:report" depends="-unit:report"/>
